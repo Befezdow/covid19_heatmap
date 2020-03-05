@@ -1,14 +1,14 @@
 import json
-from bokeh.io import show, curdoc, output_notebook
-from bokeh.layouts import column, widgetbox
+from bokeh.io import show, curdoc
+from bokeh.layouts import column, widgetbox, row
 from bokeh.plotting import figure
-from bokeh.models import GeoJSONDataSource, LinearColorMapper, ColorBar, HoverTool, Slider, Select
+from bokeh.models import GeoJSONDataSource, LinearColorMapper, ColorBar, HoverTool, Select, RadioGroup
 from bokeh.palettes import brewer
 
 from data_handler import DataHandler
 
 if __name__ == '__main__':
-    start_date = '2020-02-26'
+    start_date = '2020-01-22'
     data_handler = DataHandler('covid19', './data/countries_110m/ne_110m_admin_0_countries.shp')
 
 
@@ -22,7 +22,7 @@ if __name__ == '__main__':
     geosource = GeoJSONDataSource(geojson=json_data(start_date))
 
     # Define a sequential multi-hue color palette.
-    palette = brewer['YlGnBu'][8]
+    palette = brewer['Oranges'][8]
 
     # Reverse color order so that dark blue is highest obesity.
     palette = palette[::-1]
@@ -45,26 +45,43 @@ if __name__ == '__main__':
     p.ygrid.grid_line_color = None
 
     # Add patch renderer to figure.
-    p.patches('xs', 'ys', source=geosource, fill_color={'field': 'confirmed', 'transform': color_mapper},
-              line_color='black', line_width=0.25, fill_alpha=1)
+    patches = p.patches('xs', 'ys', source=geosource, fill_color={'field': 'confirmed', 'transform': color_mapper},
+                        line_color='black', line_width=0.25, fill_alpha=1)
 
     # Specify figure layout.
     p.add_layout(color_bar, 'below')
 
-    # Make a select object: select
+    # Make a select object
     select = Select(title="Date", value=start_date, options=data_handler.dates_list)
 
-    def update_plot(attr, old, new):
+    radio_group = RadioGroup(
+        labels=["Confirmed", "Deaths", "Recovered"], active=0)
+
+
+    def change_date(attr, old, new):
         date = select.value
         new_data = json_data(date)
         geosource.geojson = new_data
         p.title.text = 'COVID-19, %s' % date
 
 
-    select.on_change('value', update_plot)
+    def change_color_field(attr, old, new):
+        active = radio_group.value
+        if active == 0:
+            field_name = 'confirmed'
+        elif active == 1:
+            field_name = 'deaths'
+        else:
+            field_name = 'recovered'
+        patches.glyph.fill_color = {'field': field_name, 'transform': color_mapper}
+
+
+    select.on_change('value', change_date)
+    radio_group.on_change('active', change_color_field)
 
     # Make a column layout of widgetbox(slider) and plot, and add it to the current document
-    layout = column(p, widgetbox(select))
+    widgets_row = row(widgetbox(radio_group), widgetbox(select))
+    layout = column(p, widgets_row)
     curdoc().add_root(layout)
 
     # Display plot inline in Jupyter notebook
