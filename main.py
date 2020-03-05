@@ -8,9 +8,8 @@ from bokeh.palettes import brewer
 from data_handler import DataHandler
 
 if __name__ == '__main__':
-    start_date = '2020-01-22'
     data_handler = DataHandler('covid19', './data/countries_110m/ne_110m_admin_0_countries.shp')
-
+    start_date = data_handler.dates_list[0]
 
     def json_data(date):
         temp = json.loads(data_handler.get_data_per_date(date).to_json())
