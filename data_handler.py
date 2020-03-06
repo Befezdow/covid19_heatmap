@@ -12,6 +12,7 @@ class DataHandler:
 
         self._covid_df = self._get_covid_data()
         self._maps_df = self._get_map_data()
+        self._total_data = self._get_total_data()
 
         self._data = self._maps_df.merge(self._covid_df, left_on='country', right_on='country', how='left')
 
@@ -50,6 +51,15 @@ class DataHandler:
             }
         )
 
+    def _get_total_data(self):
+        return self._covid_df.groupby(['date'], as_index=False).agg(
+            {
+                'confirmed': 'sum',
+                'deaths': 'sum',
+                'recovered': 'sum'
+            }
+        )
+
     @property
     def data(self):
         return self._data
@@ -62,3 +72,13 @@ class DataHandler:
     @property
     def dates_list(self):
         return sorted(self._data['date'].unique().tolist()[1:])
+
+    @property
+    def total_data(self):
+        temp = self._total_data.sort_values(by=['date'])
+        return {
+            'dates': [datetime.strptime(d, '%m/%d/%Y').date() for d in temp['date'].tolist()],
+            'confirmed': temp['confirmed'].tolist(),
+            'deaths': temp['deaths'].tolist(),
+            'recovered': temp['recovered'].tolist(),
+        }
